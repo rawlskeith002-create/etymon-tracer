@@ -1,0 +1,637 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Etymon Tracer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: search bar + trace trail on top; entry (breakdown, function, senses, etymology) left; lineage stemma + family right. */
+:root{
+  --paper:#eef0ec; --sheet:#f8f9f6; --ink:#1b2421; --muted:#5d6a65; --rule:#cfd6d1;
+  --root:#3b3f94; --pre:#1d7a72; --suf:#9a6a12; --link:#3b3f94; --warn:#a1452f; --mark:#f2e2a8;
+  --root-bg:#e3e4f4; --pre-bg:#dcefec; --suf-bg:#f3e9d4;
+  --display:"EB Garamond",Garamond,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121615; --sheet:#1a1f1d; --ink:#e4e9e6; --muted:#97a39e; --rule:#2f3735;
+  --root:#a7abf2; --pre:#6fd0c4; --suf:#e2b45c; --link:#a7abf2; --warn:#ec8f75; --mark:#5a4a14;
+  --root-bg:#272a4a; --pre-bg:#183532; --suf-bg:#3a2f18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121615; --sheet:#1a1f1d; --ink:#e4e9e6; --muted:#97a39e; --rule:#2f3735;
+  --root:#a7abf2; --pre:#6fd0c4; --suf:#e2b45c; --link:#a7abf2; --warn:#ec8f75; --mark:#5a4a14;
+  --root-bg:#272a4a; --pre-bg:#183532; --suf-bg:#3a2f18; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
+.brand{font-family:var(--display);font-size:30px;font-weight:600;margin:0}
+.brand span{color:var(--root);font-style:italic;font-weight:400}
+.tag{color:var(--muted);font-size:13px}
+form.search{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.modes{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--sheet)}
+.modes button{border:0;background:transparent;color:var(--muted);font:500 13px var(--body);padding:0 14px;cursor:pointer;letter-spacing:.04em;text-transform:uppercase;min-height:44px}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.qbox{flex:1 1 260px;min-width:0;display:flex;border:1px solid var(--rule);border-radius:8px;background:var(--sheet)}
+.qbox input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:400 20px var(--display);padding:8px 14px;outline:none}
+.qbox:focus-within{border-color:var(--root);box-shadow:0 0 0 3px color-mix(in srgb,var(--root) 18%,transparent)}
+.go{border:0;background:var(--root);color:var(--sheet);font:600 14px var(--body);padding:0 20px;border-radius:0 7px 7px 0;cursor:pointer}
+.hint{color:var(--muted);font-size:12.5px;margin-top:-6px}
+.hint code{font-family:var(--mono);font-size:12px}
+.trail{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;min-height:26px}
+.trail .lbl{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-right:4px}
+.crumb{border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:999px;padding:2px 10px;cursor:pointer;font:inherit}
+.crumb.r{font-family:var(--mono);font-size:12px;color:var(--root)}
+.crumb[aria-current="true"]{border-color:var(--ink);font-weight:600}
+.sep{color:var(--muted)}
+.status{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 16px;border:1px dashed var(--rule);border-radius:8px;color:var(--muted);font-size:14px}
+.status.err{border-color:var(--warn);color:var(--warn)}
+.btn{font:500 13px var(--body);border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn.primary{background:var(--root);color:var(--sheet);border-color:var(--root)}
+.btn:disabled{opacity:.5;cursor:default}
+.dots::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:d 1.2s steps(4) infinite}
+@keyframes d{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+@media (prefers-reduced-motion:reduce){.dots::after{animation:none;content:"..."}}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.col{display:grid;gap:20px;min-width:0}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:22px 24px;min-width:0}
+@media (max-width:480px){.sheet{padding:18px 16px}}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+.headword{font-family:var(--display);font-size:clamp(38px,7vw,56px);line-height:1.05;margin:0;font-weight:500;text-wrap:balance;overflow-wrap:anywhere}
+.headword.mono{font-family:var(--mono);font-size:clamp(30px,6vw,44px);color:var(--root)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:13.5px;margin-top:8px;align-items:baseline}
+.meta i{font-family:var(--display);font-size:16px;color:var(--ink)}
+.syl{font-family:var(--display);font-size:17px;color:var(--ink)}
+.chip{display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:1px 7px;font-weight:600}
+.src-pd{background:var(--pre-bg);color:var(--pre)}
+.src-ai{background:var(--suf-bg);color:var(--suf)}
+.src-pat{background:var(--root-bg);color:var(--root)}
+section.block{margin-top:24px;display:grid;gap:10px}
+.bhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.bhead .eyebrow{margin:0}
+.strip{display:flex;flex-wrap:wrap;gap:4px;align-items:stretch}
+.morph{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:0;border-radius:6px;padding:8px 12px 9px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);border-bottom:3px solid var(--root);background:var(--root-bg);min-width:0}
+.morph .f{font-family:var(--display);font-size:28px;line-height:1}
+.morph .k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--root)}
+.morph .g{font-size:13px;color:var(--muted)}
+.morph.prefix{background:var(--pre-bg);border-bottom-color:var(--pre)} .morph.prefix .k{color:var(--pre)}
+.morph.suffix{background:var(--suf-bg);border-bottom-color:var(--suf)} .morph.suffix .k{color:var(--suf)}
+.morph.stem{background:var(--paper);border-bottom-color:var(--rule)} .morph.stem .k{color:var(--muted)}
+.morph:hover,.morph:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend .lp::before{background:var(--pre)} .legend .lr::before{background:var(--root)} .legend .ls::before{background:var(--suf)} .legend .lx::before{background:var(--rule)}
+.fn{font-family:var(--mono);font-size:13.5px;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.fn .kw{color:var(--root);font-weight:500}
+.fn .cm{color:var(--muted)}
+.pos-group{display:grid;gap:8px}
+.pos-group + .pos-group{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.pos-label{font-family:var(--display);font-style:italic;font-size:16px;color:var(--muted)}
+ol.senses{margin:0;padding-left:22px;display:grid;gap:8px;max-width:70ch}
+ol.senses li::marker{font-family:var(--display);color:var(--muted)}
+.etym{font-family:var(--display);font-size:17px;line-height:1.6;max-width:70ch;background:var(--paper);border-radius:8px;padding:12px 14px;border:1px solid var(--rule)}
+.etym + .etym{margin-top:8px}
+.etym abbr{text-decoration:none;border-bottom:1px dotted var(--muted);cursor:help;font-variant:small-caps}
+.cite{font:inherit;font-style:italic;color:var(--root);background:none;border:0;padding:0;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--root) 40%,transparent)}
+.xref{font:inherit;font-variant:small-caps;color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.cite:hover,.xref:hover{color:var(--ink)}
+.stemma{list-style:none;margin:0;padding:0}
+.stemma li{position:relative;padding:0 0 16px 26px}
+.stemma li::before{content:"";position:absolute;left:6px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--sheet);border:2px solid var(--root)}
+.stemma li::after{content:"";position:absolute;left:11px;top:20px;bottom:0;width:1px;background:var(--rule)}
+.stemma li:last-child::after{display:none}
+.stemma li:last-child::before{background:var(--root)}
+.stemma .lang{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;gap:8px;flex-wrap:wrap}
+.stemma .date{font-variant-numeric:tabular-nums;font-weight:400;letter-spacing:0;text-transform:none}
+.stemma .form{font-family:var(--display);font-size:21px;line-height:1.25}
+.stemma .form.recon{font-family:var(--mono);font-size:16px;color:var(--root)}
+.stemma .gl{font-size:13.5px;color:var(--muted)}
+.linkish{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.linkish:hover .form,.linkish:focus-visible .form{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.words{display:flex;flex-wrap:wrap;gap:6px}
+.w{border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:6px;padding:4px 10px;font:400 16px var(--display);cursor:pointer;display:inline-flex;gap:6px;align-items:baseline}
+.w small{font:400 11.5px var(--body);color:var(--muted)}
+.w:hover,.w:focus-visible{border-color:var(--root);color:var(--root)}
+.w.r{font:400 13px var(--mono);color:var(--root)}
+span.w{cursor:default}
+.tbl{overflow-x:auto}
+table.deriv{width:100%;border-collapse:collapse;font-size:14px}
+table.deriv th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--rule);padding:6px 8px}
+table.deriv td{border-bottom:1px solid var(--rule);padding:7px 8px;vertical-align:top}
+table.deriv td:first-child{white-space:nowrap}
+table.deriv td:first-child button{font:500 17px var(--display);color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-align:left}
+table.deriv td:first-child button:hover{text-decoration:underline}
+table.deriv td.snip{font-family:var(--display);font-size:15px;color:var(--muted)}
+mark{background:var(--mark);color:var(--ink);border-radius:2px;padding:0 1px}
+.count{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.note{font-size:14px;border-left:2px solid var(--rule);padding-left:12px;max-width:65ch;margin:0}
+.refs{display:flex;flex-wrap:wrap;gap:12px;font-size:13px}
+.refs a{color:var(--link)}
+.foot{color:var(--muted);font-size:12.5px;max-width:80ch;margin:0}
+.ai{border-style:dashed}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--root);outline-offset:2px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1 class="brand">Etymon <span>Tracer</span></h1>
+    <div class="tag">Break a word into its parts, read its public-domain definition, then follow any part back to its source.</div>
+  </header>
+
+  <form class="search" id="searchForm" autocomplete="off">
+    <div class="modes" role="group" aria-label="Search type">
+      <button type="button" id="modeWord" aria-pressed="true">Word</button>
+      <button type="button" id="modeRoot" aria-pressed="false">Root</button>
+    </div>
+    <div class="qbox">
+      <input id="q" name="q" type="text" placeholder="Search a word, e.g. inspect" aria-label="Search term" spellcheck="false">
+      <button class="go" id="goBtn" type="submit">Trace</button>
+    </div>
+  </form>
+  <div class="hint">Root mode searches every Webster's etymology for a form: try <code>specere</code>, <code>spec-</code>, <code>-logy</code>, <code>graph</code>. A trailing or leading hyphen switches to root mode automatically.</div>
+
+  <nav class="trail" id="trail" aria-label="Trace path"></nav>
+  <div id="status" hidden></div>
+  <main id="view"></main>
+
+  <p class="foot">Definitions and etymologies: <cite>Webster's Revised Unabridged Dictionary</cite> (1913), public domain, via Project Gutenberg eBook #29765. Its Greek-script forms were lost in that transcription, so some Greek etymologies read only “Gr.”. Part breakdowns come from a built-in affix and root table and are pattern matches, not authority. “Trace further” panels are generated by Claude on request and are labeled as such.</p>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- Affix and root table (common Latin, Greek and English elements) ----------
+const PREFIXES = [
+ ["a","not, without","Greek"],["ab","away from","Latin"],["abs","away from","Latin"],["ad","to, toward","Latin"],["ac","to, toward","Latin"],["af","to, toward","Latin"],["ag","to, toward","Latin"],["al","to, toward","Latin"],["an","not, without","Greek"],["ap","to, toward","Latin"],["as","to, toward","Latin"],["at","to, toward","Latin"],
+ ["ana","up, back, again","Greek"],["ante","before","Latin"],["anti","against","Greek"],["apo","away, off","Greek"],["arch","chief","Greek"],["auto","self","Greek"],["be","thoroughly, make","Old English"],["bene","well","Latin"],["bi","two","Latin"],["cata","down","Greek"],["circum","around","Latin"],
+ ["co","together","Latin"],["col","together","Latin"],["com","together, with","Latin"],["con","together, with","Latin"],["cor","together","Latin"],["contra","against","Latin"],["counter","against","French"],["de","down, from, off","Latin"],["deca","ten","Greek"],["di","two, apart","Greek/Latin"],["dia","through, across","Greek"],["dis","apart, not","Latin"],["dys","bad, difficult","Greek"],
+ ["e","out of","Latin"],["ec","out","Greek"],["ef","out of","Latin"],["em","in, into","French/Greek"],["en","in, into","French/Greek"],["epi","upon","Greek"],["eu","good, well","Greek"],["ex","out of, former","Latin"],["extra","beyond","Latin"],["fore","before","Old English"],["hemi","half","Greek"],["hetero","other","Greek"],["homo","same","Greek"],["hyper","over, beyond","Greek"],["hypo","under","Greek"],
+ ["il","not / in","Latin"],["im","not / in","Latin"],["in","in, into / not","Latin"],["inter","between","Latin"],["intra","within","Latin"],["intro","inward","Latin"],["ir","not / in","Latin"],["mal","badly","Latin/French"],["meta","after, beyond, change","Greek"],["micro","small","Greek"],["mis","wrongly","Old English"],["mono","one","Greek"],["multi","many","Latin"],
+ ["neo","new","Greek"],["non","not","Latin"],["ob","against, toward","Latin"],["oc","against","Latin"],["of","against","Latin"],["op","against","Latin"],["out","beyond","Old English"],["over","above, too much","Old English"],["pan","all","Greek"],["para","beside","Greek"],["per","through, thoroughly","Latin"],["peri","around","Greek"],["poly","many","Greek"],["post","after","Latin"],
+ ["pre","before","Latin"],["pro","forward, for","Latin/Greek"],["proto","first","Greek"],["re","again, back","Latin"],["retro","backward","Latin"],["se","apart","Latin"],["semi","half","Latin"],["sub","under","Latin"],["suc","under","Latin"],["suf","under","Latin"],["sup","under","Latin"],["sus","under, up","Latin"],["super","above, over","Latin"],["sur","over","French"],
+ ["sym","together","Greek"],["syn","together","Greek"],["trans","across","Latin"],["tri","three","Latin/Greek"],["ultra","beyond","Latin"],["un","not, reverse","Old English"],["under","below","Old English"],["uni","one","Latin"],["up","up","Old English"],["with","against, back","Old English"]
+];
+const SUFFIXES = [
+ ["able","able to be","Latin"],["ible","able to be","Latin"],["ac","pertaining to","Greek"],["acy","state, quality","Latin"],["age","act, result, collection","French"],["al","pertaining to","Latin"],["ance","state, action","Latin"],["ence","state, action","Latin"],["ancy","state","Latin"],["ency","state","Latin"],["ant","one who, -ing","Latin"],["ent","one who, -ing","Latin"],
+ ["ar","pertaining to","Latin"],["ary","relating to, place for","Latin"],["ory","relating to, place for","Latin"],["ate","make, having","Latin"],["ation","act or result of","Latin"],["ition","act or result of","Latin"],["tion","act or result of","Latin"],["sion","act or result of","Latin"],["ion","act or result of","Latin"],
+ ["cide","killer, killing","Latin"],["cracy","rule","Greek"],["crat","ruler","Greek"],["dom","state, realm","Old English"],["ed","past","Old English"],["ee","one who receives","French"],["eer","one who works with","French"],["en","make, made of","Old English"],["er","one who, more","Old English"],["or","one who","Latin"],["ery","place, practice","French"],
+ ["esque","in the style of","French"],["ess","female","French"],["est","most","Old English"],["ful","full of","Old English"],["fy","make","Latin"],["ify","make","Latin"],["hood","state","Old English"],["ia","condition","Greek/Latin"],["ian","one who, of","Latin"],["ic","pertaining to","Greek/Latin"],["ical","pertaining to","Greek/Latin"],["ics","study, practice","Greek"],
+ ["ing","action, -ing","Old English"],["ise","make","Greek"],["ize","make","Greek"],["ish","somewhat, like","Old English"],["ism","doctrine, practice","Greek"],["ist","one who practises","Greek"],["ite","one of, follower","Greek"],["itis","inflammation","Greek"],["ity","state, quality","Latin"],["ive","tending to","Latin"],["less","without","Old English"],["let","small","French"],
+ ["like","resembling","Old English"],["ling","small, one connected with","Old English"],["logy","study of","Greek"],["ology","study of","Greek"],["ly","in the manner of","Old English"],["ment","act, result","Latin"],["ness","state, quality","Old English"],["oid","resembling","Greek"],["ose","full of","Latin"],["ous","full of","Latin"],["ious","full of","Latin"],
+ ["phobia","fear of","Greek"],["ship","state, skill","Old English"],["some","tending to","Old English"],["ster","one who","Old English"],["tude","state","Latin"],["ure","act, result","Latin"],["ward","in the direction of","Old English"],["wise","in the manner of","Old English"],["y","full of, state","Old English/Greek"]
+];
+const ROOTS = [
+ [["spect","spec","spic"],"look, see","Latin","specere"],[["vid","vis"],"see","Latin","videre"],[["scop"],"look at, examine","Greek","skopein"],[["aud","audi"],"hear","Latin","audire"],[["phon","phone"],"sound, voice","Greek","phōnē"],[["tele"],"far","Greek","tēle"],
+ [["graph","gram"],"write, draw","Greek","graphein"],[["scrib","script"],"write","Latin","scribere"],[["log","logue"],"word, reason","Greek","logos"],[["dict","dic"],"say","Latin","dicere"],[["voc","vok"],"call, voice","Latin","vocare"],[["port"],"carry","Latin","portare"],
+ [["fer"],"carry, bear","Latin","ferre"],[["duct","duc","duce"],"lead","Latin","ducere"],[["ject","jac"],"throw","Latin","jacere"],[["mit","miss"],"send","Latin","mittere"],[["press"],"press","Latin","premere"],[["tract","trah"],"pull, draw","Latin","trahere"],[["struct","stru"],"build","Latin","struere"],
+ [["rupt"],"break","Latin","rumpere"],[["fract","frag"],"break","Latin","frangere"],[["clud","clus","clos","clude"],"shut","Latin","claudere"],[["cede","ceed","cess"],"go, yield","Latin","cedere"],[["gress","grad"],"step","Latin","gradi"],[["vert","vers"],"turn","Latin","vertere"],[["volv","volu"],"roll","Latin","volvere"],
+ [["mov","mot","mob"],"move","Latin","movere"],[["pon","pos","posit"],"place, put","Latin","ponere"],[["stat","sta","sist"],"stand","Latin","stare"],[["tain","ten","tin"],"hold","Latin","tenere"],[["cap","cept","ceive","cip"],"take","Latin","capere"],[["fac","fact","fect","fic"],"make, do","Latin","facere"],
+ [["form"],"shape","Latin","forma"],[["junct","join"],"join","Latin","jungere"],[["leg","lect"],"choose, read","Latin","legere"],[["cred"],"believe","Latin","credere"],[["fid"],"faith, trust","Latin","fides"],[["ven","vent"],"come","Latin","venire"],[["vit","viv"],"life, live","Latin","vivere"],[["bio"],"life","Greek","bios"],
+ [["mort"],"death","Latin","mors"],[["nat","nasc"],"born","Latin","nasci"],[["gen"],"birth, kind","Greek/Latin","genos, genus"],[["corp","corpor"],"body","Latin","corpus"],[["cord","cardi"],"heart","Latin/Greek","cor, kardia"],[["man","manu"],"hand","Latin","manus"],[["ped","pod"],"foot","Latin/Greek","pes, pous"],
+ [["cap","capit"],"head","Latin","caput"],[["ocul"],"eye","Latin","oculus"],[["derm"],"skin","Greek","derma"],[["psych"],"mind, soul","Greek","psychē"],[["neur"],"nerve","Greek","neuron"],[["path"],"feeling, disease","Greek","pathos"],[["chron"],"time","Greek","chronos"],[["temp","tempor"],"time","Latin","tempus"],
+ [["geo"],"earth","Greek","gē"],[["terr"],"land, earth","Latin","terra"],[["aqua","aqu"],"water","Latin","aqua"],[["hydr"],"water","Greek","hydōr"],[["photo","phot"],"light","Greek","phōs"],[["lum","lumin","luc"],"light","Latin","lux"],[["therm"],"heat","Greek","thermē"],
+ [["astr","aster"],"star","Greek","astēr"],[["cosm"],"world, order","Greek","kosmos"],[["demo","dem"],"people","Greek","dēmos"],[["pop","publ"],"people","Latin","populus"],[["polit","polis"],"city, citizen","Greek","polis"],[["civ","cit"],"citizen","Latin","civis"],[["arch"],"rule, chief","Greek","archē"],
+ [["reg","rect"],"rule, straight","Latin","regere"],[["jud","jur","jus"],"law, judge","Latin","jus"],[["leg"],"law","Latin","lex"],[["nom"],"law, custom","Greek","nomos"],[["onym","nym"],"name","Greek","onoma"],[["nomin"],"name","Latin","nomen"],[["sci"],"know","Latin","scire"],[["gnos","gnost"],"know","Greek","gnōsis"],
+ [["sophy","soph"],"wisdom","Greek","sophia"],[["phil"],"love","Greek","philos"],[["am","amor"],"love","Latin","amare"],[["anthrop"],"human","Greek","anthrōpos"],[["hom","homin"],"human","Latin","homo"],[["pater","patr"],"father","Latin/Greek","pater"],[["mater","matr"],"mother","Latin","mater"],
+ [["frater","fratr"],"brother","Latin","frater"],[["sol"],"sun / alone","Latin","sol, solus"],[["lun"],"moon","Latin","luna"],[["mar"],"sea","Latin","mare"],[["naut","nav"],"ship, sailor","Greek/Latin","nautēs, navis"],[["mand","mend"],"order, entrust","Latin","mandare"],[["pend","pens"],"hang, weigh","Latin","pendere"],
+ [["sens","sent"],"feel","Latin","sentire"],[["sequ","secut"],"follow","Latin","sequi"],[["solv","solu"],"loosen","Latin","solvere"],[["spir"],"breathe","Latin","spirare"],[["tang","tact","tig"],"touch","Latin","tangere"],[["tend","tens","tent"],"stretch","Latin","tendere"],[["text"],"weave","Latin","texere"],
+ [["vac"],"empty","Latin","vacare"],[["val","vail"],"be strong, worth","Latin","valere"],[["ver"],"true","Latin","verus"],[["voc"],"call","Latin","vocare"],[["vol"],"wish","Latin","velle"],[["meter","metr"],"measure","Greek","metron"],[["mens"],"measure","Latin","metiri"],[["morph"],"shape","Greek","morphē"],
+ [["chrom"],"color","Greek","chrōma"],[["cycl"],"circle, wheel","Greek","kyklos"],[["dyna","dynam"],"power","Greek","dynamis"],[["ergon","erg","urg"],"work","Greek","ergon"],[["techn"],"art, skill","Greek","technē"],[["mech"],"machine","Greek","mēchanē"],[["kine","cine"],"move","Greek","kinein"],
+ [["the","theo"],"god","Greek","theos"],[["div"],"god","Latin","divus"],[["sacr","sanct"],"holy","Latin","sacer"],[["fin"],"end, limit","Latin","finis"],[["prim"],"first","Latin","primus"],[["nov"],"new","Latin","novus"],[["neo"],"new","Greek","neos"],[["magn"],"great","Latin","magnus"],[["mega"],"great","Greek","megas"],
+ [["min"],"small","Latin","minor"],[["pac"],"peace","Latin","pax"],[["bell"],"war","Latin","bellum"],[["fort"],"strong","Latin","fortis"],[["grat"],"pleasing, thanks","Latin","gratus"],[["liber"],"free","Latin","liber"],[["loc"],"place","Latin","locus"],[["migr"],"move, wander","Latin","migrare"],
+ [["ped"],"child","Greek","pais, paidos"],[["doc","doct"],"teach","Latin","docere"],[["cur","curs"],"run","Latin","currere"],[["cur"],"care","Latin","cura"],[["flu","flux"],"flow","Latin","fluere"],[["flect","flex"],"bend","Latin","flectere"],[["plic","plex","ply"],"fold","Latin","plicare"],
+ [["hab","hib"],"have, hold","Latin","habere"],[["pel","puls"],"drive, push","Latin","pellere"],[["quer","quir","quest","quis"],"seek, ask","Latin","quaerere"],[["rog"],"ask","Latin","rogare"],[["scend","scens"],"climb","Latin","scandere"],[["sign"],"mark","Latin","signum"],[["simil","simul"],"like, same","Latin","similis"],
+ [["son"],"sound","Latin","sonus"],[["tort"],"twist","Latin","torquere"],[["urb"],"city","Latin","urbs"],[["vers"],"turn","Latin","vertere"],[["viv"],"live","Latin","vivere"],[["ann","enn"],"year","Latin","annus"],[["cent"],"hundred","Latin","centum"],[["mill"],"thousand","Latin","mille"],
+ [["anim"],"life, mind","Latin","animus"],[["cogn"],"know","Latin","cognoscere"],[["crit"],"judge","Greek","kritēs"],[["mon","monit"],"warn, remind","Latin","monere"],[["mem"],"remember","Latin","memor"],[["ment"],"mind","Latin","mens"],[["nounce","nunc"],"announce","Latin","nuntiare"],[["pict"],"paint","Latin","pingere"],
+ [["plan"],"flat","Latin","planus"],[["port"],"gate, harbor","Latin","porta"],[["sect"],"cut","Latin","secare"],[["tom"],"cut","Greek","tomē"],[["vor"],"eat","Latin","vorare"],[["phag"],"eat","Greek","phagein"],[["ocl","oclas"],"break","Greek","klan"],[["dox"],"opinion","Greek","doxa"],[["glot","gloss"],"tongue","Greek","glōssa"],[["lingu"],"tongue","Latin","lingua"]
+];
+const LANG = {"L":"Latin","LL":"Late Latin","ML":"Medieval Latin","NL":"New Latin","Gr":"Greek","F":"French","OF":"Old French","Pr":"Provençal","Prov":"Provençal","It":"Italian","Sp":"Spanish","Pg":"Portuguese","AS":"Anglo-Saxon (Old English)","OE":"Old English","ME":"Middle English","E":"English","G":"German","OHG":"Old High German","MHG":"Middle High German","D":"Dutch","LG":"Low German","OS":"Old Saxon","Icel":"Icelandic","Sw":"Swedish","Dan":"Danish","Goth":"Gothic","Skr":"Sanskrit","Ar":"Arabic","Heb":"Hebrew","Per":"Persian","W":"Welsh","Gael":"Gaelic","Ir":"Irish","Russ":"Russian","Turk":"Turkish","Lith":"Lithuanian","Armor":"Armorican (Breton)","Arm":"Armenian","Zend":"Zend (Avestan)","Hind":"Hindi","Chin":"Chinese","Jap":"Japanese","Norm":"Norman","Scot":"Scottish","Fries":"Frisian","OFries":"Old Frisian","Dial":"dialect","Mex":"Mexican","Pol":"Polish","Bohem":"Bohemian","Hung":"Hungarian","Malay":"Malay","Amer":"American","Celt":"Celtic","Norw":"Norwegian","Corn":"Cornish","Kelt":"Celtic","OSlav":"Old Slavic","Slav":"Slavic"};
+const LANG_RE = new RegExp("\\b(" + Object.keys(LANG).sort((a,b)=>b.length-a.length).join("|") + ")\\.(?=\\s)", "g");
+const ABBR = {"fr.":"from","cf.":"compare","pref.":"prefix","p. p.":"past participle","p. pr.":"present participle","freq.":"frequentative","dim.":"diminutive","v. intens.":"intensive verb","n.":"noun","v.":"verb","a.":"adjective","adv.":"adverb","prob.":"probably","perh.":"perhaps","orig.":"originally","fem.":"feminine","masc.":"masculine","pl.":"plural","imp.":"past tense","Obs.":"obsolete"};
+
+// ---------- utilities ----------
+const $ = s => document.querySelector(s);
+const view = $("#view"), statusEl = $("#status"), trailEl = $("#trail"), q = $("#q");
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)){
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) n.append(k instanceof Node ? k : String(k));
+  return n;
+}
+const norm = s => String(s||"").trim().toLowerCase().replace(/\s+/g," ");
+const arr = a => Array.isArray(a) ? a : [];
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// ---------- data loading ----------
+const shards = new Map(); let etymIdx = null, wordList = null;
+async function getJSON(path){ const r = await fetch(path); if (!r.ok) throw new Error(path + " " + r.status); return r.json(); }
+function shardKey(w){ const c = w[0]; return /[a-z]/.test(c) ? c : "_"; }
+async function loadShard(k){ if (!shards.has(k)) shards.set(k, getJSON("dict/" + k + ".json").catch(e => { shards.delete(k); throw e; })); return shards.get(k); }
+async function loadEtym(){ if (!etymIdx) etymIdx = getJSON("etym.json").catch(e => { etymIdx = null; throw e; }); return etymIdx; }
+async function loadWords(){ if (!wordList) wordList = getJSON("words.json").catch(e => { wordList = null; throw e; }); return wordList; }
+async function lookup(w){ w = norm(w); if (!w) return null; const d = await loadShard(shardKey(w)); return d[w] ? {word:w, recs:d[w]} : null; }
+async function lookupFlex(w){
+  w = norm(w);
+  let r = await lookup(w); if (r) return r;
+  const tries = [];
+  if (w.endsWith("ies")) tries.push(w.slice(0,-3)+"y");
+  if (w.endsWith("es")) tries.push(w.slice(0,-2));
+  if (w.endsWith("s")) tries.push(w.slice(0,-1));
+  if (w.endsWith("ed")) tries.push(w.slice(0,-2), w.slice(0,-1));
+  if (w.endsWith("ing")) tries.push(w.slice(0,-3), w.slice(0,-3)+"e");
+  if (w.endsWith("ly")) tries.push(w.slice(0,-2));
+  for (const t of tries) { r = await lookup(t); if (r) return {...r, from:w}; }
+  return null;
+}
+
+// ---------- morphology ----------
+function findRoot(s){
+  let best = null;
+  for (const [forms, m, lang, src] of ROOTS) for (const f of forms)
+    if (s.startsWith(f) && (!best || f.length > best.f.length)) best = {f, m, lang, src, key:forms[0]};
+  return best;
+}
+function segment(word){
+  const w = norm(word).replace(/[^a-z]/g,"");
+  if (!w) return [];
+  // try every suffix reading (none, one, or two suffixes) and keep the one that leaves the fewest unmatched letters
+  const options = [[]];
+  for (const [f,m,l] of SUFFIXES) if (w.endsWith(f) && w.length - f.length >= 3){
+    const one = [{f,m,l}]; options.push(one);
+    const rest = w.slice(0, -f.length);
+    for (const [f2,m2,l2] of SUFFIXES) if (rest.endsWith(f2) && rest.length - f2.length >= 3) options.push([{f:f2,m:m2,l:l2}, ...one]);
+  }
+  let best = null;
+  for (const sufs of options){
+    const parts = segmentCore(w, sufs);
+    const miss = parts.filter(p => p.kind === "stem").reduce((n,p) => n + p.text.length, 0);
+    const score = miss * 10 + parts.length;
+    if (!best || score < best.score) best = {score, parts};
+  }
+  return best.parts;
+}
+function segmentCore(w, sufs){
+  let start = 0, end = w.length - sufs.reduce((n,s) => n + s.f.length, 0);
+  const pre = [], suf = sufs.map(s => ({form:"-"+s.f, text:s.f, kind:"suffix", meaning:s.m, origin:s.l, key:"-"+s.f}));
+  // prefixes (up to 2): skip when a longer root starts here; accept only if what follows is a known root or long enough
+  for (let n = 0; n < 2; n++){
+    let hit = null;
+    const rootHere = findRoot(w.slice(start, end));
+    for (const [f,m,l] of PREFIXES){
+      if (!w.startsWith(f, start) || end - start - f.length < 3) continue;
+      if (rootHere && rootHere.f.length > f.length) continue;
+      const rest = w.slice(start + f.length, end);
+      const ok = findRoot(rest) || rest.length >= 5;
+      if (ok && (!hit || f.length > hit[0].length)) hit = [f,m,l];
+    }
+    if (!hit) break;
+    pre.push({form:hit[0]+"-", text:hit[0], kind:"prefix", meaning:hit[1], origin:hit[2], key:hit[0]+"-"}); start += hit[0].length;
+  }
+  // stem: greedy roots, leftover letters become a plain stem
+  const mid = []; let s = w.slice(start, end), buf = "";
+  while (s.length){
+    const r = findRoot(s);
+    if (r && (r.f.length >= 3 || s.length === r.f.length)){
+      if (buf) { mid.push({form:buf, text:buf, kind:"stem", meaning:"", origin:"", key:buf}); buf = ""; }
+      mid.push({form:r.f, text:r.f, kind:"root", meaning:r.m, origin:r.lang, key:r.key + "-", src:r.src}); s = s.slice(r.f.length);
+      // absorb a lone linking vowel
+      if (/^[aeio]$/.test(s) || (/^[aeio]/.test(s) && findRoot(s.slice(1)) && !findRoot(s))) { mid[mid.length-1].form += s[0]; mid[mid.length-1].text += s[0]; s = s.slice(1); }
+    } else { buf += s[0]; s = s.slice(1); }
+  }
+  if (buf) mid.push({form:buf, text:buf, kind:"stem", meaning:"", origin:"", key:buf});
+  return [...pre, ...mid, ...suf];
+}
+function fnText(word, parts){
+  const known = parts.filter(p => p.meaning);
+  const lines = parts.map(p => `${p.form.padEnd(10)} ${p.meaning ? "⟶ \"" + p.meaning + "\"" : "⟶ (stem, see etymology)"}`).join("\n");
+  const args = parts.map(p => p.meaning ? `${p.text}["${p.meaning.split(",")[0]}"]` : p.text).join(" ∘ ");
+  return {lines, expr: args, literal: known.length ? known.map(p => p.meaning.split(",")[0]).join(" + ") : "no known parts"};
+}
+
+// ---------- etymology rendering ----------
+function citedForms(etym){
+  const out = []; const re = new RegExp("\\b(" + Object.keys(LANG).sort((a,b)=>b.length-a.length).join("|") + ")\\.\\s+([^\\s,;:()\\[\\]|]+)", "g");
+  let m; while ((m = re.exec(etym))){
+    const form = m[2].replace(/[.]+$/,"");
+    if (!form || /^(fr|cf|see|akin|of|and|or|to|prob|perh|dim|freq|p|v|n|a)$/i.test(form) || /^[A-Z][a-z]*\.$/.test(m[2]) || LANG[form]) continue;
+    if (!out.some(o => o.lang === m[1] && o.form === form)) out.push({lang:m[1], form});
+  }
+  return out;
+}
+function seeRefs(etym){
+  const out = []; const re = /\bSee\s+([^.\]|]+(?:\.\s*[a-z]\.)*)/g; let m;
+  while ((m = re.exec(etym))) for (let t of m[1].split(/,|\band\b/)){
+    t = t.trim().replace(/\s+(v|n|a|adv|t|i)\.?$/,"").trim();
+    if (t && /^[A-Z][A-Za-z\- ']+$/.test(t) && !/^(v|n|a|t|i|adv)$/i.test(t) && !out.includes(t.toLowerCase())) out.push(t.toLowerCase());
+  }
+  return out;
+}
+function renderEtym(etym, ctxWord){
+  const node = el("div", {class:"etym"});
+  // tokenise: language abbreviations + cited form, "See X" refs, other abbreviations
+  const re = new RegExp("\\b(" + Object.keys(LANG).sort((a,b)=>b.length-a.length).join("|") + ")\\.(\\s+)([^\\s,;:()\\[\\]|]+)|\\bSee\\s+([A-Z][A-Za-z\\-' ]+(?:,\\s*[A-Z][A-Za-z\\-' ]+)*)|\\b(fr\\.|cf\\.|pref\\.|freq\\.|dim\\.|prob\\.|perh\\.|orig\\.|p\\. p\\.|p\\. pr\\.|v\\. intens\\.)", "g");
+  let last = 0, m;
+  while ((m = re.exec(etym))){
+    node.append(etym.slice(last, m.index));
+    if (m[1]){
+      node.append(el("abbr", {title:LANG[m[1]]}, m[1] + "."), m[2]);
+      const form = m[3].replace(/[.]+$/,""), trail = m[3].slice(form.length);
+      if (/^[a-zà-ÿ\-]{2,}$/i.test(form) && !/^(fr|cf|see|akin|of|and|or|to)$/i.test(form))
+        node.append(el("button", {type:"button", class:"cite", title:`Find every word whose etymology cites ${LANG[m[1]]} “${form}”`, onclick:goRoot(form, ctxWord)}, form), trail);
+      else node.append(m[3]);
+    } else if (m[4]){
+      node.append("See ");
+      m[4].split(/,\s*/).forEach((t, i) => {
+        if (i) node.append(", ");
+        const clean = t.trim();
+        if (/^(v|n|a|t|i|adv)$/i.test(clean)) node.append(clean);
+        else node.append(el("button", {type:"button", class:"xref", title:"Open Webster's entry for " + clean, onclick:goWord(clean.toLowerCase())}, clean));
+      });
+    } else if (m[5]){
+      node.append(el("abbr", {title:ABBR[m[5]] || m[5]}, m[5]));
+    }
+    last = re.lastIndex;
+  }
+  node.append(etym.slice(last));
+  return node;
+}
+
+// ---------- navigation ----------
+let mode = "word", trail = [], current = -1, ctl = null, samplePromise = null, gen = 0;
+function setMode(m){
+  mode = m;
+  $("#modeWord").setAttribute("aria-pressed", m === "word");
+  $("#modeRoot").setAttribute("aria-pressed", m === "root");
+  q.placeholder = m === "word" ? "Search a word, e.g. inspect" : "Search a root, e.g. specere, spec-, -logy";
+}
+$("#modeWord").onclick = () => { setMode("word"); q.focus(); };
+$("#modeRoot").onclick = () => { setMode("root"); q.focus(); };
+$("#searchForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const term = q.value.trim(); if (!term) return;
+  let t = mode;
+  if (/^[*\-]|-$/.test(term)) { t = "root"; setMode("root"); }
+  trace(t, term, null, true);
+});
+const goWord = w => () => { window.scrollTo({top:0, behavior:"smooth"}); setMode("word"); trace("word", w); };
+const goRoot = (r, ctx) => () => { window.scrollTo({top:0, behavior:"smooth"}); setMode("root"); trace("root", r, ctx); };
+
+function renderTrail(){
+  if (!trail.length) { trailEl.replaceChildren(); return; }
+  const kids = [el("span", {class:"lbl"}, "Trace")];
+  trail.forEach((s, i) => {
+    if (i) kids.push(el("span", {class:"sep", "aria-hidden":"true"}, "→"));
+    kids.push(el("button", {type:"button", class:"crumb" + (s.t === "root" ? " r" : ""), "aria-current": i === current ? "true" : null, onclick:() => { setMode(s.t); trace(s.t, s.term, s.ctx, false, i); }}, s.term));
+  });
+  trailEl.replaceChildren(...kids);
+}
+function showStatus(msg, err, action){
+  statusEl.hidden = false; statusEl.className = "status" + (err ? " err" : "");
+  statusEl.replaceChildren(el("span", {class: err ? "" : "dots"}, msg), action || "");
+}
+function hideStatus(){ statusEl.hidden = true; statusEl.replaceChildren(); }
+
+async function trace(t, term, ctx, fromSearch, fromTrail){
+  const my = ++gen;
+  if (ctl) { ctl.abort(); ctl = null; }
+  if (fromTrail != null) current = fromTrail;
+  else { trail = fromSearch ? [] : trail.slice(0, current + 1); trail.push({t, term, ctx}); current = trail.length - 1; }
+  renderTrail();
+  q.value = term;
+  showStatus(t === "word" ? `Opening Webster's, volume ${shardKey(norm(term)).toUpperCase()}` : `Searching 51,000 etymologies for “${term}”`);
+  try {
+    const node = t === "word" ? await wordView(term) : await rootView(term, ctx);
+    if (my !== gen) return;
+    hideStatus(); view.replaceChildren(node);
+  } catch (e) {
+    if (my !== gen) return;
+    showStatus("The dictionary data could not be loaded. Check your connection, then try again.", true, el("button", {class:"btn", type:"button", onclick:() => trace(t, term, ctx, false, current)}, "Try again"));
+  }
+}
+
+// ---------- word view ----------
+async function wordView(term){
+  const hit = await lookupFlex(term);
+  const parts = segment(hit ? hit.word : term);
+  const word = hit ? hit.word : norm(term);
+  const recs = hit ? hit.recs : [];
+  const f = fnText(word, parts);
+  const etyms = []; recs.forEach(r => { if (r.e && !etyms.includes(r.e)) etyms.push(r.e); });
+  const syl = recs[0]?.s?.replace(/"/g, "ˈ").replace(/`/g,"ˌ").replace(/\*/g,"·");
+
+  const left = el("article", {class:"sheet"},
+    el("p", {class:"eyebrow"}, "Word"),
+    el("h2", {class:"headword"}, word),
+    el("div", {class:"meta"},
+      syl ? el("span", {class:"syl", title:"Webster's syllable division and stress"}, syl) : null,
+      hit?.from ? el("span", null, `Shown for “${hit.from}”`) : null,
+      hit ? el("span", {class:"chip src-pd"}, "Webster's 1913") : el("span", {class:"chip src-ai"}, "not in Webster's 1913")),
+
+    el("section", {class:"block"},
+      el("div", {class:"bhead"}, el("h3", {class:"eyebrow"}, "Breakdown · select a part to trace it"), el("span", {class:"chip src-pat"}, "pattern match")),
+      el("div", {class:"strip"}, parts.map(p => el("button", {type:"button", class:"morph " + p.kind, onclick:goRoot(p.kind === "root" && p.src ? p.src : p.key, word), title: p.kind === "root" && p.src ? `Trace Latin/Greek source “${p.src}”` : "Trace " + p.key},
+        el("span", {class:"k"}, p.kind), el("span", {class:"f"}, p.form), el("span", {class:"g"}, p.meaning || "—"), p.src ? el("span", {class:"g"}, p.origin + " " + p.src) : (p.origin ? el("span", {class:"g"}, p.origin) : null)))),
+      el("div", {class:"legend"}, el("span", {class:"lp"}, "prefix"), el("span", {class:"lr"}, "root"), el("span", {class:"ls"}, "suffix"), el("span", {class:"lx"}, "unmatched stem"))),
+
+    el("section", {class:"block"},
+      el("h3", {class:"eyebrow"}, "Definition as a function of its parts"),
+      el("pre", {class:"fn"},
+        el("span", {class:"cm"}, "// parts\n" + f.lines + "\n\n"),
+        el("span", {class:"kw"}, word + " = "), f.expr + "\n",
+        el("span", {class:"cm"}, "// literally: " + f.literal + "\n// in use:    " + (recs.find(r => r.d)?.d?.[0] || "—").slice(0, 140)))),
+
+    recs.length ? el("section", {class:"block"},
+      el("h3", {class:"eyebrow"}, "Definitions · Webster's 1913"),
+      el("div", null, recs.filter(r => r.d).map(r => el("div", {class:"pos-group"},
+        el("div", {class:"pos-label"}, posName(r.p)),
+        el("ol", {class:"senses"}, r.d.map(s => el("li", null, s))))))) :
+      el("section", {class:"block"}, el("p", {class:"note"}, `“${norm(term)}” is not a headword in Webster's 1913. It may be newer than the dictionary, an inflected form, or a compound. Try a related word, or ask Claude below.`), suggestBox(term)),
+
+    el("section", {class:"block"}, el("div", {class:"refs"},
+      el("a", {href:"https://www.etymonline.com/word/" + encodeURIComponent(word), target:"_blank", rel:"noopener"}, "Etymonline ↗"),
+      el("a", {href:"https://en.wiktionary.org/wiki/" + encodeURIComponent(word), target:"_blank", rel:"noopener"}, "Wiktionary ↗"))));
+
+  const cited = etyms.flatMap(citedForms).filter((c, i, a) => a.findIndex(x => x.lang === c.lang && x.form === c.form) === i);
+  const refs = [...new Set(etyms.flatMap(seeRefs))].filter(r => r !== word);
+  const right = el("div", {class:"col"},
+    el("aside", {class:"sheet"},
+      el("div", {class:"bhead"}, el("p", {class:"eyebrow"}, "Etymology"), etyms.length ? el("span", {class:"chip src-pd"}, "Webster's 1913") : null),
+      etyms.length ? etyms.map(e => renderEtym(e, word)) : el("p", {class:"note"}, "Webster's gives no etymology for this entry."),
+      cited.length ? el("div", {style:"margin-top:18px"},
+        el("p", {class:"eyebrow"}, "Forms cited, in Webster's order"),
+        el("ol", {class:"stemma"}, el("li", null, el("div", {class:"lang"}, "Modern English"), el("div", {class:"form"}, word)),
+          cited.map(c => el("li", null, el("button", {type:"button", class:"linkish", onclick:goRoot(c.form, word), title:"Find every word that cites this form"},
+            el("div", {class:"lang"}, LANG[c.lang] || c.lang), el("div", {class:"form"}, c.form)))))) : null,
+      refs.length ? el("div", {style:"margin-top:12px"}, el("p", {class:"eyebrow"}, "Webster's cross-references"),
+        el("div", {class:"words"}, refs.map(r => el("button", {type:"button", class:"w", onclick:goWord(r)}, r)))) : null),
+    aiPanel("word", word, null));
+
+  return el("div", {class:"grid"}, left, right);
+}
+function posName(p){
+  const map = {"n.":"noun","v. t.":"transitive verb","v. i.":"intransitive verb","a.":"adjective","adv.":"adverb","prep.":"preposition","conj.":"conjunction","interj.":"interjection","pron.":"pronoun","v.":"verb"};
+  return map[p] || p || "entry";
+}
+function suggestBox(term){
+  const box = el("div", {class:"words"});
+  loadWords().then(list => {
+    const t = norm(term);
+    let lo = 0, hi = list.length; while (lo < hi){ const m = (lo+hi)>>1; if (list[m] < t.slice(0,4)) lo = m+1; else hi = m; }
+    const near = list.slice(lo, lo + 40).filter(w => w.startsWith(t.slice(0,3))).slice(0, 12);
+    box.append(...near.map(w => el("button", {type:"button", class:"w", onclick:goWord(w)}, w)));
+  }).catch(() => {});
+  return box;
+}
+
+// ---------- root view ----------
+function rootInfo(t){
+  const bare = t.replace(/^[*\-]+|[\-]+$/g, "");
+  const p = PREFIXES.find(x => x[0] === bare); const s = SUFFIXES.find(x => x[0] === bare);
+  const r = ROOTS.find(x => x[0].includes(bare) || x[3].split(/,\s*/).includes(bare));
+  if (/-$/.test(t) && p) return {kind:"prefix", forms:[p[0]+"-"], meaning:p[1], lang:p[2]};
+  if (/^-/.test(t) && s) return {kind:"suffix", forms:["-"+s[0]], meaning:s[1], lang:s[2]};
+  if (r) return {kind:"root", forms:r[0], meaning:r[1], lang:r[2], src:r[3]};
+  if (p) return {kind:"prefix", forms:[p[0]+"-"], meaning:p[1], lang:p[2]};
+  if (s) return {kind:"suffix", forms:["-"+s[0]], meaning:s[1], lang:s[2]};
+  return null;
+}
+async function rootView(term, ctx){
+  const raw = term.trim();
+  const bare = norm(raw).replace(/^[*\-]+|[\-]+$/g, "");
+  const info = rootInfo(norm(raw));
+  const isPre = /-$/.test(raw) && !/^-/.test(raw), isSuf = /^-/.test(raw);
+  const [etyms, words] = await Promise.all([loadEtym(), loadWords()]);
+
+  // 1) words whose Webster etymology cites a form beginning with this root (or its source verb)
+  const needles = [...new Set([bare, ...(info?.src ? info.src.split(/,\s*/) : []), ...(!isPre && !isSuf && info?.forms ? info.forms : [])])].filter(x => x && x.length >= 2);
+  // match only where Webster's cites a form: after a language label, "fr.", "pref." or a "+" join
+  const langs = Object.keys(LANG).sort((a,b)=>b.length-a.length).join("|");
+  const reCite = new RegExp("((?:\\b(?:" + langs + ")\\.|\\bfr\\.|\\bpref\\.|\\+)\\s+(?:[a-zà-ÿ]+,\\s+)?)(" + needles.map(esc).join("|") + ")[a-zà-ÿ]*", "i");
+  const cites = [];
+  if (!isSuf) for (const [w, e] of etyms){ const m = reCite.exec(e); if (m) cites.push({w, e, at:m.index + m[1].length, len:m[0].length - m[1].length}); }
+  cites.sort((a,b) => a.w.length - b.w.length || (a.w < b.w ? -1 : 1));
+
+  // 2) headwords that contain the form in the right position
+  let fam = [];
+  if (bare.length >= 2){
+    const forms = info ? info.forms.map(f => f.replace(/-/g,"")) : [bare];
+    const test = isPre ? (w => forms.some(f => w.startsWith(f) && w.length > f.length + 2))
+              : isSuf ? (w => forms.some(f => w.endsWith(f) && w.length > f.length + 2))
+              : (w => forms.some(f => f.length >= 3 && w.includes(f)) && !/\s/.test(w));
+    fam = words.filter(test).sort((a,b) => a.length - b.length || (a < b ? -1 : 1));
+  }
+  const headHit = await lookup(bare).catch(() => null);
+
+  const SHOW = 120;
+  const citeTable = el("div", {class:"tbl"}, el("table", {class:"deriv"},
+    el("thead", null, el("tr", null, el("th", null, "Word"), el("th", null, "Where Webster's etymology cites it"))),
+    el("tbody", null, cites.slice(0, SHOW).map(c => {
+      const a = Math.max(0, c.at - 50), b = Math.min(c.e.length, c.at + c.len + 60);
+      return el("tr", null, el("td", null, el("button", {type:"button", onclick:goWord(c.w)}, c.w)),
+        el("td", {class:"snip"}, (a ? "…" : "") + c.e.slice(a, c.at), el("mark", null, c.e.slice(c.at, c.at + c.len)), c.e.slice(c.at + c.len, b) + (b < c.e.length ? "…" : "")));
+    }))));
+
+  const left = el("article", {class:"sheet"},
+    el("p", {class:"eyebrow"}, "Root · " + (info?.kind || (isPre ? "prefix" : isSuf ? "suffix" : "form"))),
+    el("h2", {class:"headword mono"}, raw),
+    el("div", {class:"meta"},
+      info ? el("i", null, "“" + info.meaning + "”") : null,
+      info ? el("span", null, info.lang + (info.src ? " · source " + info.src : "")) : null,
+      info ? el("span", {class:"chip src-pat"}, "affix & root table") : el("span", {class:"chip src-pd"}, "searched in Webster's 1913")),
+    info && info.forms.length > 1 ? el("section", {class:"block"}, el("h3", {class:"eyebrow"}, "Forms"),
+      el("div", {class:"words"}, info.forms.map(f => el("span", {class:"w r"}, f)))) : null,
+
+    !isSuf ? el("section", {class:"block"},
+      el("div", {class:"bhead"}, el("h3", {class:"eyebrow"}, "Words whose origin cites it"), el("span", {class:"count"}, cites.length.toLocaleString() + " entries" + (cites.length > SHOW ? `, first ${SHOW} shown` : ""))),
+      cites.length ? citeTable : el("p", {class:"note"}, `No Webster's etymology cites a form beginning “${needles.join("”, “")}”. Try the source-language verb or noun (for example specere instead of spect), or a shorter form.`)) : null,
+
+    el("section", {class:"block"},
+      el("div", {class:"bhead"}, el("h3", {class:"eyebrow"}, isPre ? "Headwords beginning with it" : isSuf ? "Headwords ending with it" : "Headwords containing it"), el("span", {class:"count"}, fam.length.toLocaleString() + " headwords" + (fam.length > 80 ? ", first 80 shown" : ""))),
+      fam.length ? el("div", {class:"words"}, fam.slice(0, 80).map(w => el("button", {type:"button", class:"w", onclick:goWord(w)}, w))) : el("p", {class:"note"}, "No headwords match this spelling."),
+      fam.length ? el("p", {class:"foot"}, "Spelling matches can include look-alikes from unrelated sources. The etymology list above is the stronger evidence.") : null));
+
+  const right = el("div", {class:"col"},
+    headHit && headHit.recs.some(r => r.e) ? el("aside", {class:"sheet"},
+      el("div", {class:"bhead"}, el("p", {class:"eyebrow"}, `Webster's entry “${bare}”`), el("span", {class:"chip src-pd"}, "Webster's 1913")),
+      headHit.recs.filter(r => r.e).slice(0, 2).map(r => renderEtym(r.e, bare)),
+      el("button", {type:"button", class:"btn", style:"justify-self:start;margin-top:10px", onclick:goWord(bare)}, "Open full entry")) : null,
+    info?.src ? el("aside", {class:"sheet"}, el("p", {class:"eyebrow"}, "Source form"),
+      el("div", {class:"words"}, info.src.split(/,\s*/).map(s => el("button", {type:"button", class:"w r", onclick:goRoot(s, ctx)}, s))),
+      el("p", {class:"foot", style:"margin-top:8px"}, "Trace the source-language word to find derivatives whose spelling has drifted.")) : null,
+    aiPanel("root", raw, ctx));
+  return el("div", {class:"grid"}, left, right);
+}
+
+// ---------- optional: trace further with Claude ----------
+function getSample(){
+  if (!samplePromise) samplePromise = (window.claude?.use ? window.claude.use("sample") : Promise.resolve(null)).catch(() => null);
+  return samplePromise;
+}
+const AI_LS = "etymon-ai-v2";
+function aiCache(k, v){ try { const c = JSON.parse(localStorage.getItem(AI_LS) || "{}"); if (v === undefined) return c[k]; c[k] = v; const ks = Object.keys(c); if (ks.length > 150) delete c[ks[0]]; localStorage.setItem(AI_LS, JSON.stringify(c)); } catch { return undefined; } }
+function aiPrompt(t, term, ctx){
+  const shape = `{"lineage":[{"stage":string (language/period),"form":string,"date":string,"gloss":string,"reconstructed":boolean}] (${t === "word" ? "NEWEST first, from the modern word back to Proto-Indo-European if known" : "from this root back to its oldest ancestor"}),
+"pie":{"form":string,"meaning":string} or null,
+"cognates":[{"word":string,"language":string}] (0-8 in other languages),
+"related_roots":[{"root":string,"meaning":string}] (0-4; say if same PIE source),
+"confidence":"high"|"medium"|"low",
+"note":string (1-2 sentences: the most disputed or surprising point; say plainly when uncertain)}`;
+  return `You are a careful historical linguist. Trace the ${t === "word" ? `English word "${term}"` : `etymological root or form "${term}"${ctx ? ` (as found in "${ctx}")` : ""}`} back through its ancestors, beyond what an older dictionary records. Reply with ONLY one JSON object in exactly this shape:\n${shape}\nDo not invent dates; use broad periods. Mark reconstructed forms with an asterisk.`;
+}
+function aiPanel(t, term, ctx){
+  const box = el("aside", {class:"sheet ai"});
+  const k = t + ":" + norm(term) + ":" + norm(ctx || "");
+  const head = el("div", {class:"bhead"}, el("p", {class:"eyebrow"}, "Trace further"), el("span", {class:"chip src-ai"}, "generated by Claude"));
+  const body = el("div", {style:"display:grid;gap:10px"});
+  box.append(head, body);
+  const cached = aiCache(k);
+  const draw = d => {
+    body.replaceChildren(
+      d.pie?.form ? el("div", null, el("button", {type:"button", class:"w r", onclick:goRoot(d.pie.form)}, "PIE " + d.pie.form), " ", el("span", {style:"color:var(--muted);font-size:13.5px"}, d.pie.meaning || "")) : null,
+      arr(d.lineage).length ? el("ol", {class:"stemma"}, arr(d.lineage).map(s => {
+        const recon = s.reconstructed || /^\*/.test(s.form || "");
+        return el("li", null, el("div", {class:"lang"}, s.stage || "", s.date ? el("span", {class:"date"}, s.date) : null), el("div", {class:"form" + (recon ? " recon" : "")}, s.form || ""), s.gloss ? el("div", {class:"gl"}, s.gloss) : null);
+      })) : null,
+      arr(d.cognates).length ? el("div", null, el("p", {class:"eyebrow"}, "Cognates"), el("div", {class:"words"}, arr(d.cognates).map(c => el("span", {class:"w"}, c.word, el("small", null, c.language))))) : null,
+      arr(d.related_roots).length ? el("div", null, el("p", {class:"eyebrow"}, "Related roots"), el("div", {style:"display:grid;gap:6px"}, arr(d.related_roots).map(r => el("div", null, el("button", {type:"button", class:"w r", onclick:goRoot(r.root)}, r.root), " ", el("span", {style:"color:var(--muted);font-size:13.5px"}, r.meaning || ""))))) : null,
+      d.note ? el("p", {class:"note"}, d.note) : null,
+      el("p", {class:"foot"}, "Confidence: " + (d.confidence || "unstated") + ". Check against the dictionary entry and the reference links."));
+  };
+  if (cached) { draw(cached); return box; }
+  const btn = el("button", {type:"button", class:"btn primary", style:"justify-self:start"}, "Trace back to Proto-Indo-European");
+  body.append(el("p", {class:"foot"}, "Webster's 1913 predates much modern reconstruction. Ask Claude for the deeper lineage, cognates and PIE source. This uses your Claude account."), btn);
+  btn.onclick = async () => {
+    const sample = await getSample();
+    if (!sample) { body.replaceChildren(el("p", {class:"note"}, "This step needs the page open in Claude. The dictionary features work without it.")); return; }
+    ctl?.abort(); const my = ctl = new AbortController();
+    const stop = el("button", {type:"button", class:"btn", onclick:() => my.abort()}, "Stop");
+    body.replaceChildren(el("div", {class:"status"}, el("span", {class:"dots"}, "Tracing"), stop));
+    try {
+      const d = await sample.json(aiPrompt(t, term, ctx), {signal:my.signal, cache:{gcTime:86400000}});
+      if (!d || typeof d !== "object") throw {code:"invalid_json"};
+      aiCache(k, d); draw(d);
+    } catch (e) {
+      if (e?.code === "cancelled") { body.replaceChildren(btn); return; }
+      const msg = {not_granted:"Claude access was not allowed for this page, so this panel is off. Everything else still works.", sampling_disabled:"Claude is not available for this account.", rate_limited:"Too many requests in a short time. Wait a minute, then try again.", session_expired:"Your Claude session expired. Sign in again, then try again.", refused:"Claude declined this request. Try a different term."}[e?.code] || "The trace was interrupted.";
+      body.replaceChildren(el("p", {class:"note"}, msg), ["not_granted","sampling_disabled"].includes(e?.code) ? "" : btn);
+    }
+  };
+  return box;
+}
+
+setMode("word");
+trace("word", "inspect", null, true);
+getSample();
+})();
+</script>
+
+</body></html>
