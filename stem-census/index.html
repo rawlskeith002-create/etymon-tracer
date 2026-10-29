@@ -1,0 +1,148 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Stem Census</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column — headline figure, method strip, then two ranked tables sharing one bar scale. */
+:root{
+  --paper:#eef0ec; --sheet:#f8f9f6; --ink:#1b2421; --muted:#5d6a65; --rule:#cfd6d1;
+  --root:#3b3f94; --root-bg:#e3e4f4; --pre:#1d7a72; --suf:#9a6a12; --suf-bg:#f3e9d4; --grid:#dfe4e0;
+  --display:"EB Garamond",Garamond,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121615; --sheet:#1a1f1d; --ink:#e4e9e6; --muted:#97a39e; --rule:#2f3735;
+  --root:#a7abf2; --root-bg:#272a4a; --pre:#6fd0c4; --suf:#e2b45c; --suf-bg:#3a2f18; --grid:#262d2b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121615; --sheet:#1a1f1d; --ink:#e4e9e6; --muted:#97a39e; --rule:#2f3735;
+  --root:#a7abf2; --root-bg:#272a4a; --pre:#6fd0c4; --suf:#e2b45c; --suf-bg:#3a2f18; --grid:#262d2b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:920px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:grid;gap:28px}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(36px,6vw,52px);line-height:1.05;margin:6px 0 10px;text-wrap:balance}
+h1 em{color:var(--root)}
+.lede{max-width:65ch;margin:0;color:var(--ink)}
+.chip{display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:2px 8px;font-weight:600;background:var(--suf-bg);color:var(--suf);vertical-align:3px;margin-left:8px}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+@media (max-width:640px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fact{background:var(--sheet);padding:14px 16px;display:grid;gap:2px}
+.fact b{font-family:var(--display);font-size:30px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.fact span{font-size:12.5px;color:var(--muted)}
+.method{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:720px){.method{grid-template-columns:1fr}}
+.step{display:grid;gap:4px;min-width:0}
+.step .n{font-family:var(--mono);font-size:12px;color:var(--root)}
+.step p{margin:0;font-size:14px;color:var(--muted)}
+.step h3{margin:0;font-size:15px;font-weight:600}
+section.rank{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:22px 24px;display:grid;gap:14px}
+@media (max-width:480px){section.rank{padding:18px 16px}}
+.rank header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 12px}
+.rank h2{font-family:var(--display);font-weight:500;font-size:28px;margin:0}
+.rank header p{margin:0;color:var(--muted);font-size:13px}
+.row{display:grid;grid-template-columns:2.2rem minmax(7.5rem,10rem) minmax(0,1fr);gap:4px 14px;align-items:start;padding:12px 0;border-top:1px solid var(--rule)}
+.row:first-of-type{border-top:0}
+.pos{font-family:var(--display);font-size:22px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.2}
+.stem{min-width:0}
+.stem .f{font-family:var(--mono);font-size:18px;color:var(--root);font-weight:500}
+.stem .m{font-family:var(--display);font-style:italic;font-size:16px;display:block}
+.stem .o{font-size:12px;color:var(--muted)}
+.viz{min-width:0;display:grid;gap:6px}
+.barline{display:flex;align-items:center;gap:10px}
+.track{flex:1;height:14px;position:relative;background:repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 20%);border-radius:2px}
+.bar{position:absolute;inset:0 auto 0 0;background:var(--root);border-radius:2px;min-width:2px}
+.num{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;min-width:3ch;text-align:right;font-weight:500}
+.ex{font-family:var(--display);font-size:15.5px;color:var(--muted);line-height:1.45}
+.ex b{font-weight:500;color:var(--ink)}
+.tie{font-size:12.5px;color:var(--muted);margin:0}
+.scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:calc(2.2rem + 14px + clamp(7.5rem,20vw,10rem) + 14px);margin-right:calc(3ch + 10px)}
+@media (max-width:560px){.row{grid-template-columns:2rem minmax(0,1fr)}.viz{grid-column:2}.scale{display:none}}
+.notes{display:grid;gap:10px;max-width:70ch}
+.notes h2{font-family:var(--display);font-weight:500;font-size:24px;margin:0}
+.notes ul{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--muted);font-size:14px}
+.notes li b{color:var(--ink);font-weight:600}
+.foot{color:var(--muted);font-size:12.5px;max-width:80ch;margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Etymon Tracer · Stem Census</p>
+    <h1>Which stems built the most English words? <span class="chip">Preview: top &amp; bottom five</span></h1>
+    <p class="lede">A first cut at ranking classical word stems by how many words in Webster's 1913 dictionary are built on them. Only the five largest and five smallest families are shown here; the full ranked list comes next.</p>
+  </header>
+
+  <div class="facts" aria-label="Census scope">
+    <div class="fact"><b>95,541</b><span>single-word headwords scanned</span></div>
+    <div class="fact"><b>164</b><span>Latin and Greek stems tested</span></div>
+    <div class="fact"><b>77</b><span>stems with readable evidence, ranked here</span></div>
+    <div class="fact"><b>2,689</b><span>stem uses confirmed by an etymology</span></div>
+  </div>
+
+  <div class="method" aria-label="How a word is counted">
+    <div class="step"><span class="n">1 · split</span><h3>Break every headword</h3><p>Each word is split into prefix, stem and suffix using the same table the tracer uses.</p></div>
+    <div class="step"><span class="n">2 · confirm</span><h3>Check Webster's etymology</h3><p>A stem counts only if the entry cites its source word (Latin <i>facere</i>, <i>ferre</i>) or names the element itself (“-graph”, “Hydro-”).</p></div>
+    <div class="step"><span class="n">3 · filter</span><h3>Rank what can be measured</h3><p>Stems where under 10% of spelling matches could be checked are left out, because a low count there means missing evidence, not rarity.</p></div>
+  </div>
+
+  <section class="rank" aria-labelledby="topH">
+    <header><h2 id="topH">Most used</h2><p>Confirmed words in Webster's 1913 · gridlines every 29</p></header>
+    <div id="top"></div>
+  </section>
+
+  <section class="rank" aria-labelledby="botH">
+    <header><h2 id="botH">Least used</h2><p>Same scale as above, so the gap is visible</p></header>
+    <div id="bottom"></div>
+    <p class="tie" id="tie"></p>
+  </section>
+
+  <div class="notes">
+    <h2>Read these numbers as a floor</h2>
+    <ul>
+      <li><b>Counts are confirmed uses, not every use.</b> <i>fac-</i> matched 798 headwords by spelling; 103 had an etymology that names <i>facere</i>. The real family is larger.</li>
+      <li><b>Greek stems are undercounted.</b> The Gutenberg transcription dropped Greek script, so stems like <i>tele-</i>, <i>bio-</i> and <i>geo-</i> could not be checked and are excluded rather than ranked last.</li>
+      <li><b>This measures word-building, not how often people say the words.</b> Usage frequency in speech or text would need a corpus such as Google Books Ngrams.</li>
+      <li><b>Dictionary age matters.</b> Webster's 1913 predates most of the <i>techn-</i>, <i>gnos-</i> and <i>migr-</i> vocabulary in use today, which is part of why those sit at the bottom.</li>
+    </ul>
+  </div>
+
+  <p class="foot">Source: <cite>Webster's Revised Unabridged Dictionary</cite> (1913), public domain, Project Gutenberg eBook #29765. Stem table and matching rules are shared with Etymon Tracer, where any stem below can be searched in Root mode.</p>
+</div>
+
+<script>
+(() => {
+const TOP = [
+  {f:"graph- / gram-", m:"write, draw", o:"Greek graphein", n:145, ex:["diagram","epigram","graphic","graphite","logogram","epigraph"]},
+  {f:"fac- / fect- / fic-", m:"make, do", o:"Latin facere", n:103, ex:["fact","affect","effect","infect","office","facile"]},
+  {f:"ped- / pod-", m:"foot", o:"Latin pes, Greek pous", n:102, ex:["tripod","podium","octopod","dipody","pedant","epode"]},
+  {f:"meter- / metr-", m:"measure", o:"Greek metron", n:89, ex:["geometry","diameter","symmetry","metric","altimeter","trimeter"]},
+  {f:"fer-", m:"carry, bear", o:"Latin ferre", n:87, ex:["offer","refer","differ","suffer","prefer","conifer"]}
+];
+const BOTTOM = [
+  {f:"pict-", m:"paint", o:"Latin pingere", n:3, ex:["depict","picture","pictorial"]},
+  {f:"gnos- / gnost-", m:"know", o:"Greek gnōsis", n:4, ex:["gnostic","diagnostic","prognostic","geognosy"]},
+  {f:"techn-", m:"art, skill", o:"Greek technē", n:5, ex:["technical","technology","polytechnic"]},
+  {f:"cred-", m:"believe", o:"Latin credere", n:6, ex:["credible","credence","credulous","credential"]},
+  {f:"migr-", m:"move, wander", o:"Latin migrare", n:7, ex:["migrate","emigrate","immigrate","migration"]}
+];
+const MAX = 145;
+function el(t, a, ...k){ const n = document.createElement(t); if (a) for (const [x,v] of Object.entries(a)) x === "class" ? n.className = v : n.setAttribute(x, v); for (const c of k.flat()) if (c != null) n.append(c instanceof Node ? c : String(c)); return n; }
+function rows(target, list, start, dir){
+  const box = document.getElementById(target);
+  list.forEach((r, i) => box.append(el("div", {class:"row"},
+    el("div", {class:"pos"}, start + dir * i),
+    el("div", {class:"stem"}, el("div", {class:"f"}, r.f), el("span", {class:"m"}, r.m), el("span", {class:"o"}, r.o)),
+    el("div", {class:"viz"},
+      el("div", {class:"barline", role:"img", "aria-label": `${r.n} confirmed words`},
+        el("div", {class:"track"}, el("div", {class:"bar", style:`width:${(r.n / MAX * 100).toFixed(2)}%`})),
+        el("span", {class:"num"}, r.n)),
+      el("div", {class:"ex"}, el("b", null, r.ex[0]), ", " + r.ex.slice(1).join(", "))))));
+}
+rows("top", TOP, 1, 1);
+rows("bottom", BOTTOM, 77, -1);
+document.getElementById("tie").textContent = "Fifth place is a five-way tie at 7 words: migr- shares it with text- (weave), sequ- (follow), frater- (brother) and nomin- (name).";
+})();
+</script>
+
+</body></html>
